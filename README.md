@@ -1,8 +1,8 @@
 # zmk-lang-switch
 
 
-| :warning:      DOCUMENDATION IS WIP     |
-|-----------------------------------------|
+| :warning:      DOCUMENATION IS WIP (or not)      |
+|--------------------------------------------------|
 
 This module adds an software layout (i.e. language) switching behaviors to ZMK. 
 
