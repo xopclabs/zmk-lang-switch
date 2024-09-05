@@ -1,0 +1,6 @@
+target_include_directories(app PRIVATE include)
+target_sources(app PRIVATE src/language.c)
+if ((NOT CONFIG_ZMK_SPLIT) OR CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+  target_sources(app PRIVATE src/behaviors/behavior_lang_switch.c)
+  target_sources(app PRIVATE src/behaviors/behavior_kp_on_lang.c)
+endif()

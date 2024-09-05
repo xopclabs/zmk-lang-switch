@@ -1,0 +1,14 @@
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: Press key on specific language
+
+compatible: "zmk,behavior-kp-on-lang"
+
+include: one_param.yaml
+
+properties:
+  bindings:
+    type: phandle-array
+    required: true
+

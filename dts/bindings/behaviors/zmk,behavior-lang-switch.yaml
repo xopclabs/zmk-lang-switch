@@ -1,0 +1,18 @@
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: Language switch behavior
+
+compatible: "zmk,behavior-lang-switch"
+
+include: one_param.yaml
+
+properties:
+  bindings:
+    type: phandle-array
+    required: true
+  layers:
+    type: array
+    required: true
+  no-layer-switch:
+    type: boolean
