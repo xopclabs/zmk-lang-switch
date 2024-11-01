@@ -50,8 +50,8 @@ static int lang_keymap_binding_pressed(struct zmk_behavior_binding *binding,
     // Switch needed number of times
     if (number_of_switches > 0) {
         for (uint8_t i = 0; i < number_of_switches; i++) {
-            zmk_behavior_queue_add(event.position, config->behavior, true, 0);
-            zmk_behavior_queue_add(event.position, config->behavior, false, 0);
+            zmk_behavior_queue_add(&event, config->behavior, true, 0);
+            zmk_behavior_queue_add(&event, config->behavior, false, 0);
             LOG_DBG("LANG switch");
         }
         current_language_state = binding->param1;

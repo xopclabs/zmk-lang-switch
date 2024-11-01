@@ -50,8 +50,8 @@ static int kp_on_lang_keymap_binding_pressed(struct zmk_behavior_binding *bindin
             get_switch_back_binding(current_lang, &config->switch_behavior);
         data->switch_back = true;
         LOG_DBG("KP_LANG switchback %d", data->switch_back_behavior.param1);
-        zmk_behavior_queue_add(event.position, config->switch_behavior, true, 0);
-        zmk_behavior_queue_add(event.position, config->switch_behavior, false, 0);
+        zmk_behavior_queue_add(&event, config->switch_behavior, true, 0);
+        zmk_behavior_queue_add(&event, config->switch_behavior, false, 0);
     }
     return raise_zmk_keycode_state_changed_from_encoded(binding->param1, true, event.timestamp);
 }
@@ -62,8 +62,8 @@ static int kp_on_lang_keymap_binding_released(struct zmk_behavior_binding *bindi
     struct behavior_kp_on_lang_data *data = dev->data;
 
     if (data->switch_back) {
-        zmk_behavior_queue_add(event.position, data->switch_back_behavior, true, 0);
-        zmk_behavior_queue_add(event.position, data->switch_back_behavior, false, 0);
+        zmk_behavior_queue_add(&event, data->switch_back_behavior, true, 0);
+        zmk_behavior_queue_add(&event, data->switch_back_behavior, false, 0);
         data->switch_back = false;
     }
     return raise_zmk_keycode_state_changed_from_encoded(binding->param1, false, event.timestamp);
