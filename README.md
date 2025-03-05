@@ -1,12 +1,13 @@
 # zmk-lang-switch
 
 This module:
-- makes custom keyboard layouts possible in multi-language setups (e.g. colemak-dh for English, phonetic-colemak-dh for Russian while having only QWERTY and ЙЦУКЕН installed in OS)
-- let's you have a language-independent symbolic layer (i.e. `?` key is always `?` be it on English or on Russian layout) 
+
+- Enables custom keyboard layouts for multi-language setups (e.g. Colemak-DH for English and the default ЙЦУКЕН for Russian, while only QWERTY and ЙЦУКЕН are installed in the OS).
+- Allows you to have a language-independent symbolic layer (i.e. the `?` key always produces `?`, regardless of whether the layout is English or Russian).
 
 ## Usage
 
-To load the module, add the following entries to `remotes` and `projects` in `config/west.yml`.
+To load the module, add the following entries to the `remotes` and `projects` sections in `config/west.yml`:
 
 ```yaml
 manifest:
@@ -28,15 +29,18 @@ manifest:
 ```
 
 ## Configuration
-You'll need to define a keycode for language switching hotkey in your system (`alt+shift` for me on Linux and Windows). I also define layer id's with meaningful names. 3 behaviors (in `.keymap` file or in a separate `.dtsi`):
+
+You need to define a keycode for the language-switching hotkey on your system (e.g., `Alt+Shift` on Linux and Windows). It is also advisable to define layer IDs with meaningful names. For example, add the following three definitions in your `.keymap` file or in a separate `.dtsi` file:
+
 ```dtsi
 #define ENG 0
 #define RU 1
 #define LANGSW LA(LSHIFT)
 ```
-Create a language switch behavior. You'll use it to switch to a target language layer like this `&ls RU`. When pressed, this behavior combines switching to language's layers with pressing `LANGSW` enough times to switch to target language. 
 
-**Keep in mind that keyboard doesn't know anything about actual OS language!** This means that "out of sync" situations might happen (keyboard thinks it's on ENG, but in reality OS is on Russian), which might be resolved by pressing `LANGSW` manually. This also means that you should define your keyboard layers in according to your OS' keyboard layout order. 
+Create a language switch behavior that you will use to switch to a target language layer (e.g. `&ls RU`). When pressed, this behavior both switches to the specified language layer and sends the `LANGSW` keycode enough times to change the target language.
+
+**Keep in mind that the keyboard does not know the actual OS language!** This means that "out of sync" situations might occur (for example, the keyboard might assume it’s on ENG while the OS is actually set to Russian). This issue can be resolved by pressing `LANGSW` manually. It also means you should define your keyboard layers in the same order as the OS language order.
 ```dtsi
 ls: lang_switch {
     compatible = "zmk,behavior-lang-switch";
@@ -45,9 +49,9 @@ ls: lang_switch {
     layers = <ENG RU>;
 };
 ```
-Create a language switch behavior that won't actually switch layer. You'll use it for the next behavior.
+
+Next, create a language switch behavior that does not actually switch the layer. You will use this for the following behavior.
 ```dtsi
-Create a language switch
 ls_: lang_switch_no_layer {
     compatible = "zmk,behavior-lang-switch";
     #binding-cells = <1>;
@@ -56,7 +60,8 @@ ls_: lang_switch_no_layer {
     no-layer-switch;
 };
 ```
-Create a press-on-lang behavior for each language. It assures that keycode will be pressed on a specified language. We could use this behavior as `&kp_en QMARK`, language will be switched to English briefly, only to press the question mark keycode (pressing `&kp QMARK` while having, for example, Russian layout turned on results in comma being typed instead)  
+
+Now, create a press-on-lang behavior for each language. This behavior ensures that the keycode is sent using a specified language. For example, you could use it as `&kp_en QMARK` so that the language is temporarily switched to English to press the question mark key (since pressing `&kp QMARK` while using a Russian layout might result in a comma being typed instead).
 ```dtsi
 kp_en: kp_on_eng {
     compatible = "zmk,behavior-kp-on-lang";
@@ -64,7 +69,48 @@ kp_en: kp_on_eng {
     bindings = <&ls_ ENG>;
 };
 ```
-Finally, you can create a layer for each language (remeber the order!), assign a lang-switch keys (or a combo!) and create a separate language-independent symbolic layer (having them always pressed on English)
+
+Finally, create a layer for each language (remember the order!), assign language-switch keys (or a combo), and set up a separate language-independent symbolic layer (ensuring that those keys are always interpreted as if in English).
+
+## Usage example
+```dtsi
+keymap {
+    compatible = "zmk,keymap";
+
+    eng_layer { // ENG
+        display-name = "English";
+        bindings = <
+        &kp Q      &kp W      &kp F      &kp P      &kp B          &kp J      &kp L      &kp U      &kp Y      &sl ACCENT
+        &kp A      &kp R      &kp S      &kp T      &kp G          &kp M      &kp N      &kp E      &kp I      &kp O
+        &kp Z      &kp X      &kp C      &kp D      &kp V          &kp K      &kp H      &kp COMMA  &kp DOT    &kp FSLH
+                                   &lt SYMB SPACE   &sl FUNC      &lt NUM ESC  &mt LSHIFT BSPC
+        >;
+    };
+
+    // RU_* keys are just #defines for each Russian letter on ЙЦУКЕН to QWERTY's English letter on the same place
+    // &ru_b_jo and &ru_sh_sch are double taps, don't worry about, I'm weird.
+    ru_layer { // RU
+        display-name = "Russian";
+        bindings = <
+        &kp RU_F   &kp RU_YA  &ru_ss_hs  &kp RU_P   &ru_b_jo     &kp RU_H  &kp RU_L  &kp RU_Y    &kp RU_JI  &kp RU_ZH
+        &kp RU_A   &kp RU_R   &kp RU_S   &kp RU_T   &kp RU_G     &kp RU_M  &kp RU_N  &kp RU_E    &kp RU_I   &kp RU_O
+        &kp RU_CH  &kp RU_C   &kp RU_K   &kp RU_D   &kp RU_YI    &kp RU_Z  &kp RU_V  &ru_sh_sch  &kp RU_YU  &kp RU_IE
+                                   &lt SYMB SPACE   &sl FUNC     &lt NUM ESC  &mt LSHIFT BSPC
+        >;
+    };
+
+    symb_layer { // SYMB
+        display-name = "Symbolic";
+        bindings = <
+        &kp_en TILDE  &kp_en AT    &kp_en PRCNT  &kp_en EXCL   &kp_en HASH      &kp_en SLASH  &kp_en QMARK  &kp_en LT     &kp_en GT    &kp_en BSLH
+        &kp_en SQT    &kp_en LBKT  &kp_en RBKT   &kp_en EQUAL  &kp_en PLUS      &kp_en STAR   &kp_en UNDER  &kp_en LPAR   &kp_en RPAR  &kp_en MINUS
+        &kp_en COLON  &kp_en SEMI  &kp_en DQT    &kp_en CARET  &kp_en DLLR      &kp_en LBRC   &kp_en RBRC   &kp_en GRAVE  &kp_en AMPS  &kp_en PIPE
+                                        &kp SPACE  &kp BSPC    &kp_en PERIOD    &kp_en COMMA
+        >;
+    };
+...
+```
 
 ## Links
-- My personal [zmk-config](https://github.com/xopclabs/zmk-config) contains a more elaborate example
+
+- My personal [zmk-config](https://github.com/xopclabs/zmk-config) contains a more elaborate example.
