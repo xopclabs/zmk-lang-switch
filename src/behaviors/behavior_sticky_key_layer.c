@@ -12,6 +12,7 @@
 #include <drivers/behavior.h>
 #include <zephyr/logging/log.h>
 #include <zmk/behavior.h>
+#include <string.h>
 
 #include <zmk/matrix.h>
 #include <zmk/endpoints.h>
@@ -481,8 +482,36 @@ static int sticky_key_position_state_changed_listener(const zmk_event_t *eh) {
                 const char *behavior_name = binding->behavior_dev;
                 LOG_DBG("SKL: position %d binding: %s", ev->position, behavior_name);
 
-                // Only switch layers for regular key presses, not for other behaviors
+                // Switch layers for key-like behaviors that should use the target layer
+                bool is_switchable_behavior = false;
+                
+                // Always switch for regular key presses
                 if (strcmp(behavior_name, "key_press") == 0) {
+                    is_switchable_behavior = true;
+                } else {
+                    // Check for behaviors that are key-like and should switch layers
+                    // This covers tap-dance, hold-tap, and other key-producing behaviors
+                    // Pattern matching for common key-like behavior prefixes/patterns
+                    const char *key_like_patterns[] = {
+                        "ru_",      // Russian tap-dance behaviors 
+                        "en_",      // English tap-dance behaviors 
+                        "es_",      // Spanish tap-dance behaviors 
+                        "td_",      // Common tap-dance prefix
+                        "ht_",      // Hold-tap prefix
+                        "mt_",      // Mod-tap prefix (though mt might be handled elsewhere)
+                    };
+                    
+                    for (int i = 0; i < sizeof(key_like_patterns) / sizeof(key_like_patterns[0]); i++) {
+                        if (strncmp(behavior_name, key_like_patterns[i], strlen(key_like_patterns[i])) == 0) {
+                            is_switchable_behavior = true;
+                            LOG_DBG("SKL: detected key-like behavior: %s (pattern: %s)", 
+                                   behavior_name, key_like_patterns[i]);
+                            break;
+                        }
+                    }
+                }
+                
+                if (is_switchable_behavior) {
                     // Only switch to English if we're currently on a language layer (0 or 1)
                     // Don't switch if we're on function layers (7, etc.) - keep those keys on the
                     // function layer
