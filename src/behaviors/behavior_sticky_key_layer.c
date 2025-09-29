@@ -400,20 +400,37 @@ static int sticky_key_keycode_state_changed_listener(const zmk_event_t *eh) {
     }
 
     // Restore layer state after processing if we changed it (only on key press)
+    // But DON'T restore if a layer-switching behavior (like a combo) has changed layers
     if (target_layer_key && ev_copy.state && saved_layer_state_to_restore != 0) {
-        LOG_DBG("SKL: restoring layer state after key processing");
-        // Restore all layers
-        for (zmk_keymap_layer_id_t layer = 0; layer < ZMK_KEYMAP_LAYERS_LEN; layer++) {
-            bool should_be_active = (saved_layer_state_to_restore & BIT(layer)) != 0;
-            bool currently_active = zmk_keymap_layer_active(layer);
+        zmk_keymap_layers_state_t current_layer_state = zmk_keymap_layer_state();
+        zmk_keymap_layers_state_t expected_layer_state = BIT(target_layer_key->target_layer);
+        
+        // Only restore if we're still on the target layer (no combo switched us away)
+        // If current state matches what we set (target layer), then restore
+        // If it doesn't match, a combo or other behavior changed it, so don't restore
+        bool layer_was_changed_by_other_behavior = (current_layer_state != expected_layer_state);
+        
+        if (!layer_was_changed_by_other_behavior) {
+            LOG_DBG("SKL: restoring layer state after key processing (0x%llx -> 0x%llx)", 
+                    current_layer_state, saved_layer_state_to_restore);
+            // Restore all layers
+            for (zmk_keymap_layer_id_t layer = 0; layer < ZMK_KEYMAP_LAYERS_LEN; layer++) {
+                bool should_be_active = (saved_layer_state_to_restore & BIT(layer)) != 0;
+                bool currently_active = zmk_keymap_layer_active(layer);
 
-            if (should_be_active && !currently_active) {
-                zmk_keymap_layer_activate(layer);
-            } else if (!should_be_active && currently_active &&
-                       layer != zmk_keymap_layer_default()) {
-                zmk_keymap_layer_deactivate(layer);
+                if (should_be_active && !currently_active) {
+                    zmk_keymap_layer_activate(layer);
+                } else if (!should_be_active && currently_active &&
+                           layer != zmk_keymap_layer_default()) {
+                    zmk_keymap_layer_deactivate(layer);
+                }
             }
+        } else {
+            LOG_DBG("SKL: NOT restoring layer state - another behavior changed it (saved: 0x%llx, expected: 0x%llx, current: 0x%llx)",
+                    saved_layer_state_to_restore, expected_layer_state, current_layer_state);
         }
+        // Clear the saved state now that we've handled it
+        target_layer_key->saved_layer_state = 0;
     }
 
     return event_reraised ? ZMK_EV_EVENT_CAPTURED : ZMK_EV_EVENT_BUBBLE;
@@ -425,7 +442,8 @@ static int sticky_key_position_state_changed_listener(const zmk_event_t *eh) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
-    // Only care about key presses, not releases
+    // Handle key releases - DON'T restore layer state here
+    // Layer restoration should happen in keycode listener or when sticky key is released
     if (!ev->state) {
         return ZMK_EV_EVENT_BUBBLE;
     }
@@ -519,7 +537,11 @@ static int sticky_key_position_state_changed_listener(const zmk_event_t *eh) {
                         LOG_DBG("SKL: intercepting position %d, switching to layer %d before "
                                 "keymap lookup (current layer: %d)",
                                 ev->position, target_layer_key->target_layer, current_layer);
-                        target_layer_key->saved_layer_state = zmk_keymap_layer_state();
+                        // Save the layer state ONLY if we haven't already saved it
+                        if (target_layer_key->saved_layer_state == 0) {
+                            target_layer_key->saved_layer_state = zmk_keymap_layer_state();
+                            LOG_DBG("SKL: saved layer state: 0x%llx", target_layer_key->saved_layer_state);
+                        }
                         zmk_keymap_layer_to(target_layer_key->target_layer);
                         LOG_DBG("SKL: position %d will use sticky key at pos %d for layer %d",
                                 ev->position, target_layer_key->position,
